@@ -391,21 +391,24 @@ class CrashProofVisualBot:
         except Exception as e:
             print(f"   [Notice] Tab open warning: {e}")
 
-    def clean_excess_tabs(self, max_tabs: int = 3):
+    def clean_excess_tabs(self, max_tabs: int = 3, keep_last: Optional[int] = None):
         """
         Close older background tabs to prevent memory bloat and keep Chrome fast and stable.
         """
+        limit = keep_last if keep_last is not None else max_tabs
         self.ensure_valid_window()
         try:
             handles = self.driver.window_handles
-            if len(handles) > max_tabs:
-                print(f"   [Memory] Closing {len(handles) - max_tabs} excess tab(s) to maintain stability...")
-                while len(self.driver.window_handles) > max_tabs:
+            if len(handles) > limit:
+                print(f"   [Memory] Closing {len(handles) - limit} excess tab(s) to maintain stability...")
+                while len(self.driver.window_handles) > limit:
                     # Switch to oldest tab (index 0) and close it
                     self.driver.switch_to.window(self.driver.window_handles[0])
                     self.driver.close()
                     # Return focus to active tab
-                    self.driver.switch_to.window(self.driver.window_handles[-1])
+                    handles = self.driver.window_handles
+                    if handles:
+                        self.driver.switch_to.window(handles[-1])
                     time.sleep(0.3)
         except Exception as e:
             print(f"   [Notice] Tab cleanup warning: {e}")
@@ -520,7 +523,7 @@ class CrashProofVisualBot:
 
                 # End of cycle tab cleanup
                 print(f"\n[Cycle #{self.cycle_count} Finished] Maintaining optimal tab state...")
-                self.clean_excess_tabs(keep_last=1)
+                self.clean_excess_tabs(max_tabs=1)
 
                 cycle_pause = random.uniform(config.CYCLE_PAUSE_MIN, config.CYCLE_PAUSE_MAX)
                 print(f"Pausing for {cycle_pause:.1f}s before Cycle #{self.cycle_count + 1}...\n")
